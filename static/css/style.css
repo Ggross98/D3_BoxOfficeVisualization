@@ -1,0 +1,82 @@
+.d3-tip {
+    line-height: 1;
+    font-weight: bold;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    border-radius: 2px;
+    pointer-events: none;
+  }
+
+.axisLabel {
+    font-weight: bold;
+    font-size: 16;
+}
+
+#mainSvg {
+  width: 1200px;
+  height: 720px;
+  
+}
+
+#choose-div {
+  float: right;
+  width: 20%;
+  height: 720;
+  align-content:flex-start;
+  
+}
+
+#main-div {
+  float: left;
+  width: 1200;
+  height: 720;
+  
+}
+
+.title {
+  text-align: center;
+}
+
+.button {
+  display: inline-block;
+  padding: 15px 25px;
+  font-size: 16px;
+  cursor: pointer;
+  text-align: center;   
+  text-decoration: none;
+  outline: none;
+  color: #fff;
+  background-color: #4CAF50;
+  border: none;
+  border-radius: 5px;
+  box-shadow: 0 5px #999;
+}
+
+.button:hover {
+  background-color: #3e8e41
+}
+
+.button:active {
+  background-color: #3e8e41;
+  box-shadow: 0 5px #666;
+  transform: translateY(4px);
+}
+
+.button:disabled {
+  background-color: gray
+}
+
+.select {
+  width: 200px;
+  font-size: 16px;
+  text-align: center;   
+  text-decoration: none;
+}
+
+.label {
+  font-size: 16px;
+  text-align: left;   
+  text-decoration: none;
+  
+}

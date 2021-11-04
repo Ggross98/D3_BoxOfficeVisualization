@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Data Visualization</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+    <link rel="stylesheet" href="./css/style.css">
+    <script src="./js/d3.min.js"></script>
+    <script src="./js/d3-tip.js"></script>
+</head>
+
+<body background-color = "gray">
+    
+    <div>
+        <div id="choose-div">
+            <h1 class = "title">设置</h1>
+            <br /><br /><br />
+            <input type="button" value="开始" id = "startButton" class = "button"/>
+            <input type="button" value="停止" id = "stopButton" class = "button"/>
+            <br /><br />
+            <select id="selectYear" ></select>年
+            <select id="selectMonth" onchange="getDay()"></select>月
+            <select id="selectDay"></select>日
+            <input type="button" value="转到" id = "dateButton" class = "button"/>
+            <br /><br />
+            <label class = "label">排序方式</label>
+            <select id = "selectSort" class = "select"></select>
+            <br /><br />
+            <label class = "label">显示方式</label>
+            <select id = "selectShow" class = "select"></select>
+        </div>
+    
+        <div id ="main-div">
+            <h1 class = "title">2019年9-10月电影票房统计图</h1>
+            <svg width = 1200 height = 720 id="mainSvg" class="svgs"></svg>
+        </div>
+    </div>
+    
+
+    
+    <script>
+        //或得当前年月日
+        var date = new Date(2019, 9, 1);
+        var year = date.getFullYear();
+        var month = date.getMonth() + 1;
+        var day = date.getDate();
+
+        var startYear = 2019;
+        var endYear = 2019;
+
+        //得到按钮
+        var dateButton = document.getElementById("dateButton");
+        var startButton = document.getElementById("startButton");
+        var stopButton = document.getElementById("stopButton");
+
+        //得到日期select项
+        var selectYearElement = document.getElementById("selectYear");
+        var selectMonthElement = document.getElementById("selectMonth");
+        var selectDayElement = document.getElementById("selectDay");
+        
+        //得到两个设置项
+        var selectShow = document.getElementById("selectShow");
+        var selectSort = document.getElementById("selectSort");
+        
+
+        init();
+
+        function init(){
+            getYear();
+            getMonth();
+            getDay();
+            //设置默认值
+            selectDayElement.selectedIndex = 0;
+            selectMonthElement.selectedIndex = 0;
+
+            dateButton.onclick = function () {
+            //TODO
+            
+            }
+
+            //设置项初始化
+            selectShow.appendChild(getOptionObject("绝对值"));
+            selectShow.appendChild(getOptionObject("相对值"));
+            
+            selectSort.appendChild(getOptionObject("单日票房"));
+            selectSort.appendChild(getOptionObject("累计票房"));
+            
+        }
+
+        function getOptionObject(text){
+            let opt, txt;
+            opt = document.createElement("option");
+            txt = document.createTextNode(text);
+            opt.appendChild(txt);
+
+            return opt;
+        }
+
+        function getSelectDate(){
+            let year = 2019;
+            let month = selectMonthElement.selectedIndex + 8;
+            let day = selectDayElement.selectedIndex + 1;
+
+            return new Date(year, month, day);
+        }
+
+        //年份函数
+        function getYear() {
+            for (var i = startYear; i <= endYear; i++) {
+                var opYearElement = document.createElement("option");
+                var textElement = document.createTextNode(i);
+                opYearElement.appendChild(textElement);
+                opYearElement.value = i;
+                selectYearElement.appendChild(opYearElement);
+            }
+            //设置默认年份的值
+            selectYearElement.selectedIndex = year - startYear;
+        }
+        //月份函数
+        function getMonth() {
+            for (var i = 9; i <= 10; i++) {
+                var opMonthElement = document.createElement("option");
+                textMonth = document.createTextNode(i);
+                opMonthElement.appendChild(textMonth);
+                opMonthElement.value = i;
+                selectMonthElement.appendChild(opMonthElement);
+            }
+            //设置默认年份的值
+            selectMonthElement.selectedIndex = 0;
+        }
+        //日期函数
+        function getDay() {
+
+            var currentMonth = selectMonthElement.selectedIndex + 9;
+            if(currentMonth == 9)
+                setDay(30);
+            else
+                setDay(31);
+
+            /*
+            var getSelectedYear = selectYearElement.selectedIndex + startYear;
+            var getSelectedMonth = selectMonthElement.selectedIndex + 1;
+            var flag = 0;
+            var selectDayElement = document.getElementById("selectDay");
+            if (selectDayElement.hasChildNodes()) {
+                var optionElements = selectDayElement.getElementsByTagName("option");
+                for (var i = 0; i < optionElements.length; i++) {
+                    selectDayElement.removeChild(optionElements[0]);
+                    //不知道为什么必须得自减一
+                    i--;
+                }
+            } else {}
+            //得到闰年
+            if ((getSelectedYear % 4 == 0 && getSelectedYear % 100 != 0) || getSelectedYear % 400 == 0) { //得到闰年的年号
+                //alert("闰年");
+                //得到闰年大月份除二月以外
+                if ((getSelectedMonth <= 7 && getSelectedMonth % 2 == 1 && getSelectedMonth != 2) || (
+                        getSelectedMonth >= 8 && getSelectedMonth % 2 == 0)) { //得到大月
+                    setDay(flag = 31);
+                } else if (getSelectedMonth <= 7 && getSelectedMonth == 2) {
+                    setDay(flag = 29);
+                } else if ((getSelectedMonth <= 7 && getSelectedMonth % 2 == 0 && getSelectedMonth != 2) || (
+                        getSelectedMonth >= 8 && getSelectedMonth % 2 == 1)) { //得到小月份除二月以外
+                    setDay(flag = 30);
+                }
+            }
+            //非闰年
+            else {
+                //alert("平年");
+                //得到平年大月份除二月以外
+                if ((getSelectedMonth <= 7 && getSelectedMonth % 2 == 1 && getSelectedMonth != 2) || (
+                        getSelectedMonth >= 8 && getSelectedMonth % 2 == 0)) { //得到大月
+                    setDay(flag = 31);
+                } else if (getSelectedMonth <= 7 && getSelectedMonth == 2) {
+                    setDay(flag = 28);
+                } else if ((getSelectedMonth <= 7 && getSelectedMonth % 2 == 0 && getSelectedMonth != 2) || (
+                        getSelectedMonth >= 8 && getSelectedMonth % 2 == 1)) { //得到小月份除二月以外
+                    setDay(flag = 30);
+                }
+            }*/
+        }
+        
+        function setDay(dayLength) {
+            for (var i = 1; i <= dayLength; i++) {
+                var opDayElement = document.createElement("option");
+                textMonth = document.createTextNode(i);
+                opDayElement.appendChild(textMonth);
+                opDayElement.value = i;
+                //alert(i);
+                selectDayElement.appendChild(opDayElement);
+            }
+            
+        }
+
+        
+    </script>
+    <script>
+        const mainSvg = d3.select('.svgs')
+        const mainWidth = +mainSvg.attr("width");
+        const mainHeight = +mainSvg.attr("height");
+        const margin = {
+            top: 50,
+            right: 60,
+            bottom: 100,
+            left: 60
+        };
+        const innerWidth = mainWidth - margin.left - margin.right;
+        const innerHeight = mainHeight - margin.bottom - margin.top;
+
+        //图表部分的尺寸
+        const width = innerWidth;
+        const height = innerHeight;
+
+        const leftPartWidth = width / 2;
+        const rightPartWidth = width - leftPartWidth;
+
+        const g = mainSvg.append("g")
+            .attr("id", "mainGroup")
+            .attr("width", width)
+            .attr("height", height)
+            .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+        const dateDuration = 1000,
+            translateDuration = 800;
+        var interval;
+
+        var dateIndex = 0;
+        var dates = [];
+        var seqList = [];
+        var fullData;
+
+        var xRightScale, xLeftScale, yScale;
+
+
+        const getName = d => d["影片名"];
+        const getRanking = d => d["排名"];
+        const getDayBoxOffice = d => d["单日票房(万)"];
+        const getTotalBoxOffice = d => d["累计票房(万)"];
+
+        const calTranslateY = (i, end) => {
+
+            let barHeight = yScale.bandwidth();
+            let barPadding = 0.5;
+            let count = 10;
+
+            if (dateIndex === 1 || end) {
+                return (barHeight + barPadding) * i + (barPadding / 2);
+            } else {
+                return (barHeight + barPadding) * (count + 1);
+            }
+        }
+
+
+        const tip = d3.tip()
+            .attr("class", "d3-tip")
+            .html(d => {
+                 return d["影片名"]+"    单日票房："+d["单日票房(万)"]+"万    环比变化："+d["环比变化(%)"]+"%    累计票房："+d["累计票房(万)"] + "万";
+            });
+        
+        // 主方法
+        // 加载数据并显示图表及其他对象
+        d3.csv("./data/box_office.csv").then(data => {
+
+            //处理数据
+            data.forEach(e => {
+
+                e["日期"] = getDateObject(e["日期"]);
+                e["排名"] = +e["排名"];
+                e["单日票房(万)"] = +(e["单日票房(万)"].replace(",", ""));
+                e["累计票房(万)"] = +(e["累计票房(万)"].replace(",", ""));
+            });
+            fullData = data;
+
+            //按日期把数据归类
+            //Set中元素不重复，用以获得日期列表
+            var map = data.map(d => d["日期"].toString());
+            var set = new Set(map);
+            dates = Array.from(set);
+            //console.log(dates);
+            //日期排序
+            //dates.sort((a, b) => Date(b) - Date(a));
+            dates.reverse();
+
+
+            //给日期安排数组空间
+            seqList = []; 
+            dates.forEach(date => {
+                seqList.push([]);
+            });
+
+            //把各个日期数据放入空间
+            data.forEach(d => {
+                seqList[dates.indexOf(d["日期"].toString())].push(d);
+            });
+            //console.log(seqList);
+
+            g.call(tip);
+
+            initAxis(data);
+            initDateText();
+            //enter(seqList[0])
+
+            
+            //初始化设置内容
+            startButton.onclick = () =>{
+                startAnimation();
+            };
+            startButton.disabled = false;
+                
+            stopButton.onclick = () => {
+                stopAnimation(); 
+            }
+            stopButton.disabled = true;
+
+            dateButton.onclick = () => {
+
+                stopAnimation();
+                
+                let selectDate = getSelectDate();
+                dateIndex = getDateIndex(selectDate);
+                console.log(selectDate, dateIndex);
+                render(dateIndex);
+            }
+
+
+            
+            dateIndex = 0;
+            render(dateIndex);
+        });
+
+        const render = function(dateIndex){
+            let dayData = seqList[dateIndex];
+            renderChart(dayData);
+            renderDateText(dayData);
+        }
+
+        const getDateIndex = function(date){
+            return dates.indexOf(date.toString());
+        }
+
+        const stopAnimation = function(){
+            clearInterval(interval);
+
+            startButton.disabled = false;
+            stopButton.disabled = true;
+        }
+
+        const startAnimation = function(){
+
+            dateIndex++;
+
+            interval = setInterval(() => {
+                if (dateIndex >= dates.length) {
+                    clearInterval(interval);
+                } else {
+                    //console.log(dateIndex);
+                    var dayData = seqList[dateIndex];
+                    render(dateIndex);
+                    dateIndex++;
+                }
+            }, dateDuration);
+
+            startButton.disabled = true;
+            stopButton.disabled = false;
+        }
+
+        // 输入“2020年12月1日”格式的字符串
+        // 返回一个Date对象
+        const getDateObject = function (date) {
+            var yearIndex = date.indexOf("年");
+            var monthIndex = date.indexOf("月");
+            var dayIndex = date.indexOf("日");
+
+            var year = +(date.substring(0, yearIndex));
+            var month = +(date.substring(yearIndex + 1, monthIndex))-1;
+            var day = +(date.substring(monthIndex + 1, dayIndex));
+
+            return new Date(year, month, day);
+
+        }
+
+        // 输入Date对象
+        // 返回“2020年12月1日”格式的字符串
+        const getDateString = function (date) {
+
+            console.log(date);
+
+            var year = date.getFullYear();
+            var month = date.getMonth() + 1;
+            var day = date.getDate();
+
+            return (year + "年" + month + "月" + day + "日");
+        }
+        
+        // 初始化坐标轴
+        const initAxis = function (data) {
+
+            var arr = new Array(10);
+            for (var i = 0; i < 10; i++) {
+                arr[i] = i + 1;
+            }
+
+
+            xRightScale = d3.scaleLinear()
+                .domain(d3.extent(data, e => e["累计票房(万)"]))
+                .range([0, rightPartWidth])
+                .nice();
+
+            xLeftScale = d3.scaleLinear()
+                .domain(d3.extent(data, e => e["单日票房(万)"]).reverse())
+                .range([0, leftPartWidth])
+                .nice();
+
+            yScale = d3.scaleBand()
+                .domain(arr)
+                .range([0, innerHeight])
+                .padding(0.5)
+
+
+            var xRightAxis = d3.axisTop(xRightScale)
+                .ticks(4)
+                .tickSize(-innerHeight);
+
+            var xLeftAxis = d3.axisTop(xLeftScale)
+                .ticks(4)
+                .tickSize(-innerHeight);
+
+            var yAxis = d3.axisLeft(yScale)
+                //.tickSize(-innerWidth);
+
+            var xRightAxisGroup = g.append("g");
+            xRightAxisGroup.call(xRightAxis)
+                .attr("transform", `translate(${leftPartWidth}, 0)`)
+
+            var xLeftAxisGroup = g.append("g").call(xLeftAxis)
+                .attr("transform", `translate(0, 0)`);
+            var yAxisGroup = g.append("g").call(yAxis)
+                .attr("transform", `translate(${leftPartWidth}, 0)`);
+
+            g.append("text")
+                .attr("class", "axisLabel")
+                .text("累计票房（万元）")
+                .attr('x', leftPartWidth + 25)
+                .attr('y', -25)
+                .style('text-anchor', 'start');
+
+            g.append("text")
+                .attr("class", "axisLabel")
+                .text("单日票房（万元）")
+                .attr('x', leftPartWidth - 25)
+                .attr('y', -25)
+                .style('text-anchor', 'end');
+        }
+        
+        //TODO
+        const updateAxis = function(){
+
+        }
+
+        // 初始化日期标题
+        const initDateText = function (){
+            g.append('text')
+                .classed('dateText', true)
+                //.text(getDateString(data["日期"]))
+                .attr('x', margin.left)
+                .attr('y', height - 100)
+                .attr('fill', 'rgb(128, 128, 128)')
+                .attr('font-size', 40)
+                .attr('text-anchor', 'start')
+        }
+
+        // 刷新日期标题
+        const renderDateText = function (data){ 
+            g.select(".dateText")
+                .text(getDateString(data[0]["日期"]));
+
+        }
+
+        // 渲染图表
+        const renderChart = function (data) {
+
+            const bars = g.selectAll(".bar").data(data, getName);
+
+            let barsEnter;
+
+            barsEnter = bars.enter()
+                .append('g')
+                .classed('bar', true)
+                .attr("fill-opacity", 0)
+                .attr("transform", d => `translate(0, ${height})`);
+                //.attr("transform", d => `translate(0, ${yScale(d["排名"])})`);
+                //.style('transform', (d, i) => `translate3d(0, ${calTranslateY(i)}px, 0)`);
+
+            //显示tips
+            barsEnter
+                .on("mouseover", function (d) {
+                    d3.select(this)
+                        .selectAll("rect")
+                        .attr("stroke", "black")
+                        .attr("stroke-width", 2);
+                        //.attr("fill-opacity", 1);
+                    tip.show(d);
+                })
+                .on("mouseout", function (d) {
+                    d3.select(this)
+                        .selectAll("rect")
+                        .attr("stroke", "none");
+                        //.attr("fill-opacity", 0.6);
+                    //.attr("fill", "blue");
+                    tip.hide();
+                });
+
+            barsEnter
+                .transition().duration(translateDuration)
+                .attr("fill-opacity", 1)
+                .attr("transform", d => `translate(0, ${yScale(d["排名"])})`)
+                /*.select('.leftRect')
+                .attr("x", d => xLeftScale(d["单日票房(万)"]))
+                .attr('width', d => leftPartWidth - xLeftScale(d["单日票房(万)"]))*/
+                
+            //生成两个rect对象，分别表示单日、累计票房    
+            barsEnter.append('rect')
+                .attr("class", "leftRect")
+                .attr("x", d => xLeftScale(d["单日票房(万)"]))
+                .attr('width', d => leftPartWidth - xLeftScale(d["单日票房(万)"]))
+                .attr('height', yScale.bandwidth() + 'px')
+                .attr('fill', "purple")
+                .attr('stroke', 'none')
+            barsEnter.append('rect')
+                .attr("class", "rightRect")
+                .attr("x", d => leftPartWidth)
+                .attr('width', d => xRightScale(d["累计票房(万)"]))
+                .attr('height', yScale.bandwidth() + 'px')
+                .attr('fill', "orange")
+                .attr('stroke', 'none')
+            
+            
+            barsEnter.append('text')
+                .classed('nameLabel', true)
+                .text(getName)
+                .attr('x', leftPartWidth+10)
+                .attr('y', -5)
+                .attr('font-size', 14)
+                .style('text-anchor', 'start');
+            /*
+            barsEnter.append('text')
+                .classed('value', true)
+                .text(d => d.value)
+                .attr('x', d => scale(d.value) + 10)
+                .attr('y', barPadding);
+            */
+
+            // 更新模式
+            barsUpdate = bars.transition().duration(translateDuration).ease(d3.easeLinear)
+                //.style('transform', (d, i) => 'translate3d(0, ' + calTranslateY(i, 'end') + 'px, 0)')
+                .attr("transform", d => `translate(0, ${yScale(d["排名"])})`)
+            barsUpdate.select('.leftRect')
+                .attr("x", d => xLeftScale(d["单日票房(万)"]))
+                .attr('width', d => leftPartWidth - xLeftScale(d["单日票房(万)"]))
+            barsUpdate.select('.rightRect')
+                //.attr("x", d => xLeftScale(d["单日票房(万)"]))
+                .attr('width', d => xRightScale(d["累计票房(万)"]))
+
+            
+            /*    bars
+                .select('text.value')
+                .transition().duration(duration).ease(d3.easeLinear)
+                .attr('x', d => scale(d.value) + 10)
+                .tween('text', function (d) {
+                    const textDom = this;
+                    const i = d3.interpolateRound(d.lastValue, d.value);
+                    return (t) => textDom.textContent = i(t);
+                });
+            */
+
+            // 退出模式
+            bars.exit()
+                .transition().duration(translateDuration).ease(d3.easeLinear)
+                .attr("fill-opacity", 0)
+                .attr("transform", `translate(0,  ${height})`)
+                /*.style('transform', function (d, i) {
+                    return 'translate3d(0, ' + calTranslateY(i) + 'px, 0)';
+                })
+                .style('width', function (d) {
+                    return scale(d.value) + 'px';
+                })*/
+                .remove();
+        }
+        
+    </script>
+</body>
+
+</html>
