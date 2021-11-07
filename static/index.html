@@ -73,11 +73,6 @@
             selectDayElement.selectedIndex = 0;
             selectMonthElement.selectedIndex = 0;
 
-            dateButton.onclick = function () {
-            //TODO
-            
-            }
-
             //设置项初始化
             selectShow.appendChild(getOptionObject("绝对值"));
             selectShow.appendChild(getOptionObject("相对值"));
@@ -137,50 +132,14 @@
             else
                 setDay(31);
 
-            /*
-            var getSelectedYear = selectYearElement.selectedIndex + startYear;
-            var getSelectedMonth = selectMonthElement.selectedIndex + 1;
-            var flag = 0;
-            var selectDayElement = document.getElementById("selectDay");
-            if (selectDayElement.hasChildNodes()) {
-                var optionElements = selectDayElement.getElementsByTagName("option");
-                for (var i = 0; i < optionElements.length; i++) {
-                    selectDayElement.removeChild(optionElements[0]);
-                    //不知道为什么必须得自减一
-                    i--;
-                }
-            } else {}
-            //得到闰年
-            if ((getSelectedYear % 4 == 0 && getSelectedYear % 100 != 0) || getSelectedYear % 400 == 0) { //得到闰年的年号
-                //alert("闰年");
-                //得到闰年大月份除二月以外
-                if ((getSelectedMonth <= 7 && getSelectedMonth % 2 == 1 && getSelectedMonth != 2) || (
-                        getSelectedMonth >= 8 && getSelectedMonth % 2 == 0)) { //得到大月
-                    setDay(flag = 31);
-                } else if (getSelectedMonth <= 7 && getSelectedMonth == 2) {
-                    setDay(flag = 29);
-                } else if ((getSelectedMonth <= 7 && getSelectedMonth % 2 == 0 && getSelectedMonth != 2) || (
-                        getSelectedMonth >= 8 && getSelectedMonth % 2 == 1)) { //得到小月份除二月以外
-                    setDay(flag = 30);
-                }
-            }
-            //非闰年
-            else {
-                //alert("平年");
-                //得到平年大月份除二月以外
-                if ((getSelectedMonth <= 7 && getSelectedMonth % 2 == 1 && getSelectedMonth != 2) || (
-                        getSelectedMonth >= 8 && getSelectedMonth % 2 == 0)) { //得到大月
-                    setDay(flag = 31);
-                } else if (getSelectedMonth <= 7 && getSelectedMonth == 2) {
-                    setDay(flag = 28);
-                } else if ((getSelectedMonth <= 7 && getSelectedMonth % 2 == 0 && getSelectedMonth != 2) || (
-                        getSelectedMonth >= 8 && getSelectedMonth % 2 == 1)) { //得到小月份除二月以外
-                    setDay(flag = 30);
-                }
-            }*/
         }
         
         function setDay(dayLength) {
+
+            while(selectDayElement.hasChildNodes()){
+                selectDayElement.removeChild(selectDayElement.firstChild);
+            }
+
             for (var i = 1; i <= dayLength; i++) {
                 var opDayElement = document.createElement("option");
                 textMonth = document.createTextNode(i);
@@ -211,7 +170,7 @@
         const width = innerWidth;
         const height = innerHeight;
 
-        const leftPartWidth = width / 2;
+        const leftPartWidth = width / 3 * 2;
         const rightPartWidth = width - leftPartWidth;
 
         const g = mainSvg.append("g")
@@ -229,7 +188,14 @@
         var seqList = [];
         var fullData;
 
-        var xRightScale, xLeftScale, yScale;
+        var xRightScaleAbs, xLeftScaleAbs;
+        var xRightScale, xLeftScale;
+        var yScale;
+
+        // 坐标轴显示方式
+        // "absolute": 以全部数据中的最大值为边界
+        // "relative": 以当日数据中的最大值为边界
+        var dataScaleType = "absolute";
 
 
         const getName = d => d["影片名"];
@@ -296,12 +262,14 @@
 
             g.call(tip);
 
+            initAbsoluteScale(data)
             initAxis(data);
             initDateText();
             //enter(seqList[0])
 
             
             //初始化设置内容
+            // 开始、结束按钮
             startButton.onclick = () =>{
                 startAnimation();
             };
@@ -312,14 +280,38 @@
             }
             stopButton.disabled = true;
 
+            // 日期跳转按钮
             dateButton.onclick = () => {
 
                 stopAnimation();
                 
                 let selectDate = getSelectDate();
                 dateIndex = getDateIndex(selectDate);
-                console.log(selectDate, dateIndex);
+                //console.log(selectDate, dateIndex);
                 render(dateIndex);
+            }
+
+            // 改变坐标轴显示方式
+            selectShow.onchange = () => {
+
+                let index = selectShow.selectedIndex;
+                let type = (index == 0) ? "absolute" : "relative";
+                
+                if(type == dataScaleType){
+
+                }
+                else{
+                    
+                    stopAnimation();
+                    
+                    dataScaleType = type;
+                    render(dateIndex);
+
+                }
+            }
+
+            selectSort.onchange = () => {
+                // TODO
             }
 
 
@@ -330,6 +322,7 @@
 
         const render = function(dateIndex){
             let dayData = seqList[dateIndex];
+            updateAxis(dayData);
             renderChart(dayData);
             renderDateText(dayData);
         }
@@ -351,7 +344,7 @@
 
             interval = setInterval(() => {
                 if (dateIndex >= dates.length) {
-                    clearInterval(interval);
+                    stopAnimation();
                 } else {
                     //console.log(dateIndex);
                     var dayData = seqList[dateIndex];
@@ -383,7 +376,7 @@
         // 返回“2020年12月1日”格式的字符串
         const getDateString = function (date) {
 
-            console.log(date);
+            // console.log(date);
 
             var year = date.getFullYear();
             var month = date.getMonth() + 1;
@@ -391,51 +384,74 @@
 
             return (year + "年" + month + "月" + day + "日");
         }
-        
-        // 初始化坐标轴
-        const initAxis = function (data) {
 
-            var arr = new Array(10);
-            for (var i = 0; i < 10; i++) {
-                arr[i] = i + 1;
-            }
-
-
+        // 输入当日数据
+        // 改变相对scale
+        const setRelativeScale = function (data){
             xRightScale = d3.scaleLinear()
-                .domain(d3.extent(data, e => e["累计票房(万)"]))
+                .domain([0, d3.max(data, e => e["累计票房(万)"])])
                 .range([0, rightPartWidth])
                 .nice();
 
             xLeftScale = d3.scaleLinear()
-                .domain(d3.extent(data, e => e["单日票房(万)"]).reverse())
+                .domain([d3.max(data, e => e["单日票房(万)"]), 0])
                 .range([0, leftPartWidth])
                 .nice();
+        }
 
+        // 设置绝对scale
+        const initAbsoluteScale = function (data){
+            xRightScaleAbs = d3.scaleLinear()
+                .domain([0, d3.max(data, e => e["累计票房(万)"])])
+                .range([0, rightPartWidth])
+                .nice();
+
+            xLeftScaleAbs = d3.scaleLinear()
+                .domain([d3.max(data, e => e["单日票房(万)"]), 0])
+                .range([0, leftPartWidth])
+                .nice();
+            
+            var arr = new Array(10);
+            for (var i = 0; i < 10; i++) {
+                arr[i] = i + 1;
+            }
             yScale = d3.scaleBand()
                 .domain(arr)
                 .range([0, innerHeight])
-                .padding(0.5)
+                .padding(0.5);
 
+            // 相对scale初始值
+            xLeftScale = xLeftScaleAbs;
+            xRightScale = xRightScaleAbs;
+        }
+        
+        // 初始化坐标轴
+        const initAxis = function (data) {
 
-            var xRightAxis = d3.axisTop(xRightScale)
+            let xRightAxis = d3.axisTop(xRightScaleAbs)
+                .ticks(2)
+                .tickSize(-innerHeight);
+
+            let xLeftAxis = d3.axisTop(xLeftScaleAbs)
                 .ticks(4)
                 .tickSize(-innerHeight);
 
-            var xLeftAxis = d3.axisTop(xLeftScale)
-                .ticks(4)
-                .tickSize(-innerHeight);
-
-            var yAxis = d3.axisLeft(yScale)
+            let yAxis = d3.axisLeft(yScale)
                 //.tickSize(-innerWidth);
 
-            var xRightAxisGroup = g.append("g");
+            var xRightAxisGroup = g.append("g").attr("class", "xRightAxis");
             xRightAxisGroup.call(xRightAxis)
                 .attr("transform", `translate(${leftPartWidth}, 0)`)
+                
 
-            var xLeftAxisGroup = g.append("g").call(xLeftAxis)
-                .attr("transform", `translate(0, 0)`);
-            var yAxisGroup = g.append("g").call(yAxis)
-                .attr("transform", `translate(${leftPartWidth}, 0)`);
+            var xLeftAxisGroup = g.append("g").attr("class", "xLeftAxis");
+            xLeftAxisGroup.call(xLeftAxis)
+                .attr("transform", `translate(0, 0)`)
+                
+
+            var yAxisGroup = g.append("g").attr("class", "yAxis").call(yAxis)
+                .attr("transform", `translate(${leftPartWidth}, 0)`)
+                
 
             g.append("text")
                 .attr("class", "axisLabel")
@@ -452,9 +468,50 @@
                 .style('text-anchor', 'end');
         }
         
-        //TODO
-        const updateAxis = function(){
+        // 根据日数据更新相对scale
+        const updateRelativeScale = function(data){
+            xRightScale = d3.scaleLinear()
+                .domain([0, d3.max(data, e => e["累计票房(万)"])])
+                .range([0, rightPartWidth])
+                .nice();
 
+            xLeftScale = d3.scaleLinear()
+                .domain([d3.max(data, e => e["单日票房(万)"]), 0])
+                .range([0, leftPartWidth])
+                .nice();
+        }
+
+        // 更新坐标轴
+        const updateAxis = function(data){
+
+            let leftAxis, rightAxis;
+            let leftScale, rightScale;
+
+            if(dataScaleType == "relative"){
+
+                setRelativeScale(data);
+                leftScale = xLeftScale;
+                rightScale = xRightScale;
+            }
+            else{
+                leftScale = xLeftScaleAbs;
+                rightScale = xRightScaleAbs;
+            }
+
+            rightAxis = d3.axisTop(rightScale)
+                .ticks(2)
+                .tickSize(-innerHeight);
+
+            leftAxis = d3.axisTop(leftScale)
+                .ticks(4)
+                .tickSize(-innerHeight);
+
+            g.select(".xLeftAxis")
+                .transition().duration(translateDuration).ease(d3.easeLinear)
+                .call(leftAxis);
+            g.select(".xRightAxis")
+                .transition().duration(translateDuration).ease(d3.easeLinear)
+                .call(rightAxis);    
         }
 
         // 初始化日期标题
@@ -478,6 +535,16 @@
 
         // 渲染图表
         const renderChart = function (data) {
+
+            let leftScale, rightScale;
+            if(dataScaleType == "absolute"){
+                leftScale = xLeftScaleAbs;
+                rightScale = xRightScaleAbs;
+            }
+            else{
+                leftScale = xLeftScale;
+                rightScale = xRightScale;
+            }
 
             const bars = g.selectAll(".bar").data(data, getName);
 
@@ -521,15 +588,15 @@
             //生成两个rect对象，分别表示单日、累计票房    
             barsEnter.append('rect')
                 .attr("class", "leftRect")
-                .attr("x", d => xLeftScale(d["单日票房(万)"]))
-                .attr('width', d => leftPartWidth - xLeftScale(d["单日票房(万)"]))
+                .attr("x", d => leftScale(d["单日票房(万)"]))
+                .attr('width', d => leftPartWidth - leftScale(d["单日票房(万)"]))
                 .attr('height', yScale.bandwidth() + 'px')
                 .attr('fill', "purple")
                 .attr('stroke', 'none')
             barsEnter.append('rect')
                 .attr("class", "rightRect")
                 .attr("x", d => leftPartWidth)
-                .attr('width', d => xRightScale(d["累计票房(万)"]))
+                .attr('width', d => rightScale(d["累计票房(万)"]))
                 .attr('height', yScale.bandwidth() + 'px')
                 .attr('fill', "orange")
                 .attr('stroke', 'none')
@@ -555,11 +622,11 @@
                 //.style('transform', (d, i) => 'translate3d(0, ' + calTranslateY(i, 'end') + 'px, 0)')
                 .attr("transform", d => `translate(0, ${yScale(d["排名"])})`)
             barsUpdate.select('.leftRect')
-                .attr("x", d => xLeftScale(d["单日票房(万)"]))
-                .attr('width', d => leftPartWidth - xLeftScale(d["单日票房(万)"]))
+                .attr("x", d => leftScale(d["单日票房(万)"]))
+                .attr('width', d => leftPartWidth - leftScale(d["单日票房(万)"]))
             barsUpdate.select('.rightRect')
                 //.attr("x", d => xLeftScale(d["单日票房(万)"]))
-                .attr('width', d => xRightScale(d["累计票房(万)"]))
+                .attr('width', d => rightScale(d["累计票房(万)"]))
 
             
             /*    bars
