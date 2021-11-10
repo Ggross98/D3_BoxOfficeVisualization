@@ -7,11 +7,25 @@
     <link rel="stylesheet" href="./css/style.css">
     <script src="./js/d3.min.js"></script>
     <script src="./js/d3-tip.js"></script>
+    <script src="./data/data.js"></script>
 </head>
 
 <body background-color = "gray">
     
     <div>
+        <!-- 保存数据为json格式
+        <script src="https://cdn.bootcss.com/FileSaver.js/2014-11-29/FileSaver.js"></script>
+        <input type="button" id="export" value="保存"/>
+        <script>
+            var button = document.getElementById("export");
+            button.addEventListener("click", saveHandler, false);
+            function saveHandler(){
+                 var content = JSON.stringify(data);
+                 var blob = new Blob([content], {type: "text/plain;charset=utf-8"});
+                 saveAs(blob, "data.json");
+            }
+        </script>
+        -->
         <div id="choose-div">
             <h1 class = "title">设置</h1>
             <br /><br /><br />
@@ -216,26 +230,33 @@
             }
         }
 
-
         const tip = d3.tip()
             .attr("class", "d3-tip")
             .html(d => {
                  return d["影片名"]+"    单日票房："+d["单日票房(万)"]+"万    环比变化："+d["环比变化(%)"]+"%    累计票房："+d["累计票房(万)"] + "万";
             });
+
+
+        //**************************************************
+
         
         // 主方法
         // 加载数据并显示图表及其他对象
-        d3.csv("./data/box_office.csv").then(data => {
-
+        const initialize = function(){
+            
+            data = box_office_data;
+            fullData = data;
+            
             //处理数据
             data.forEach(e => {
-
-                e["日期"] = getDateObject(e["日期"]);
-                e["排名"] = +e["排名"];
-                e["单日票房(万)"] = +(e["单日票房(万)"].replace(",", ""));
-                e["累计票房(万)"] = +(e["累计票房(万)"].replace(",", ""));
+                e["日期"] = new Date(e["日期"]);
+                //e["日期"] = getDateObject(e["日期"]);
+                //e["排名"] = +e["排名"];
+                //e["单日票房(万)"] = +(e["单日票房(万)"].replace(",", ""));
+                //e["累计票房(万)"] = +(e["累计票房(万)"].replace(",", ""));
             });
             fullData = data;
+            
 
             //按日期把数据归类
             //Set中元素不重复，用以获得日期列表
@@ -311,14 +332,14 @@
             }
 
             selectSort.onchange = () => {
-                // TODO
+                // TODO: 选择排序方式
             }
 
 
             
             dateIndex = 0;
             render(dateIndex);
-        });
+        }
 
         const render = function(dateIndex){
             let dayData = seqList[dateIndex];
@@ -653,6 +674,11 @@
                 })*/
                 .remove();
         }
+
+        //************************************************
+
+        
+        initialize();
         
     </script>
 </body>
